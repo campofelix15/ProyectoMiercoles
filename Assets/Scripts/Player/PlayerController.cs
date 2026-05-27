@@ -41,15 +41,50 @@ public class PlayerController : MonoBehaviour
         inputActions = new();
         rb = GetComponent<Rigidbody2D>();
         if (spriteRenderer == null) spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+        
+        // Obtenemos referencias locales si están en el mismo objeto
+        weapon = GetComponent<PlayerWeapon>();
+        health = GetComponent<PlayerHealth>();
+        movement = GetComponent<PlayerMovement>();
     }
 
     private void Start()
     {
-        var DataRef = SessionController.Instance.PlayerManager;
-        weapon = DataRef.PlayerWeapon;
-        health = DataRef.PlayerHealth;
+        // Forzamos la obtención de componentes locales primero
+        weapon = GetComponent<PlayerWeapon>();
+        health = GetComponent<PlayerHealth>();
         movement = GetComponent<PlayerMovement>();
-        weapon.Init(this);
+        rb = GetComponent<Rigidbody2D>();
+
+        // Si no se encontraron en el objeto local (porque se añaden dinámicamente o están en otro sitio), buscamos en el Manager
+        if (weapon == null || health == null)
+        {
+            var manager = SessionController.Instance?.PlayerManager;
+            if (manager != null)
+            {
+                if (weapon == null) weapon = manager.PlayerWeapon;
+                if (health == null) health = manager.PlayerHealth;
+            }
+        }
+
+        // Verificación de seguridad para evitar NullReferenceException
+        if (health == null) Debug.LogError("PlayerHealth no encontrado en el Jugador ni en el PlayerManager!");
+        if (weapon == null) Debug.LogError("PlayerWeapon no encontrado en el Jugador ni en el PlayerManager!");
+
+        if (weapon != null)
+        {
+            weapon.Init(this);
+            inputActions.Player.Attack.performed += weapon.OnFire;           
+            inputActions.Player.Move.performed += weapon.OnMove;             
+            inputActions.Player.AltAttack.performed += weapon.OnAltFire;
+        }
+        
+        inputActions.Enable();
+    }
+
+    private void OnEnable()
+    {
+        // Movido a Start para evitar NullReferenceException con weapon
     }
 
     private void Update()
@@ -61,13 +96,12 @@ public class PlayerController : MonoBehaviour
     {
         if (health != null && health.IsInvulnerable)
         {
-            // Titileo simple basado en el tiempo
             float alpha = (Mathf.Floor(Time.time / flickerInterval) % 2 == 0) ? 0.2f : 1.0f;
             Color color = spriteRenderer.color;
             color.a = alpha;
             spriteRenderer.color = color;
         }
-        else if (spriteRenderer.color.a < 1.0f)
+        else if (spriteRenderer != null && spriteRenderer.color.a < 1.0f)
         {
             Color color = spriteRenderer.color;
             color.a = 1.0f;
@@ -75,22 +109,34 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void OnEnable()
-    {
-        inputActions.Enable();                                           
-        inputActions.Player.Attack.performed += weapon.OnFire;           
-        inputActions.Player.Move.performed += weapon.OnMove;             
-        inputActions.Player.AltAttack.performed += weapon.OnAltFire;
-    }
-
     private void OnDisable()
     {
-        inputActions.Player.Attack.performed -= weapon.OnFire;           
-        inputActions.Player.Move.performed -= weapon.OnMove;             
-        inputActions.Player.AltAttack.performed -= weapon.OnAltFire;     
+        if (weapon != null)
+        {
+            inputActions.Player.Attack.performed -= weapon.OnFire;           
+            inputActions.Player.Move.performed -= weapon.OnMove;             
+            inputActions.Player.AltAttack.performed -= weapon.OnAltFire;
+        }
         inputActions.Disable();
     }
 
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        Debug.Log("Player triggered with: " + other.gameObject.name + " on layer: " + other.gameObject.layer);
+
+        if ((1 << other.gameObject.layer & (1 << 8)) != 0 || other.gameObject.CompareTag("Enemy"))
+        {
+            Debug.Log("Enemy detected in Trigger!");
+            if (health.TakeDamage(1))
+            {
+                Vector2 knockbackDir = (transform.position - other.transform.position).normalized;
+                if (Mathf.Abs(knockbackDir.x) < 0.1f) knockbackDir.x = transform.position.x > other.transform.position.x ? 1 : -1;
+
+                ApplyKnockback(knockbackDir, 10f);
+            }
+        }
+    }
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
