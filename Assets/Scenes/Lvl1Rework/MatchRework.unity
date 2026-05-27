@@ -228,6 +228,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Enemy
       objectReference: {fileID: 0}
+    - target: {fileID: 4214904499902491054, guid: d55fc4e503914cb47922e32bcc6156f2, type: 3}
+      propertyPath: m_TagString
+      value: Enemy
+      objectReference: {fileID: 0}
     - target: {fileID: 5544138790687911149, guid: d55fc4e503914cb47922e32bcc6156f2, type: 3}
       propertyPath: currentHealth
       value: 0
@@ -375467,6 +375471,7 @@ GameObject:
   - component: {fileID: 1719603403}
   - component: {fileID: 1719603398}
   - component: {fileID: 1719603404}
+  - component: {fileID: 1719603405}
   m_Layer: 3
   m_Name: Player
   m_TagString: Player
@@ -375648,13 +375653,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 491bde00254653c41bfbac2c86027008, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeapon
+--- !u!114 &1719603405
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1719603396}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6084004f03019dd4d94de4bcd9e2c6d4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   bulletPrefab: {fileID: 4850576100186321916, guid: 5deabbd947bb43e41ae91a0eb0a72bab, type: 3}
-  firePoint: {fileID: 1427083509}
-  bulletSpeed: 50
-  bulletLifetime: 0.5
-  spreadAngle: 30
-  damage: 1
-  knockbackforce: 0
+  firePoint: {fileID: 1719603397}
+  spriteRenderer: {fileID: 0}
+  flickerInterval: 0.1
 --- !u!1001 &2045746041
 PrefabInstance:
   m_ObjectHideFlags: 0
