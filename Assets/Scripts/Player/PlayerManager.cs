@@ -18,7 +18,18 @@ public class PlayerManager : MonoBehaviour
     private void Awake()
     {
         SessionController.Instance.PlayerManager = this;
-        playerWeapon = new();
+        
+        playerWeapon = GetComponent<PlayerWeapon>();
+        if (playerWeapon == null) playerWeapon = gameObject.AddComponent<PlayerWeapon>();
+
+        playerHealth = GetComponent<PlayerHealth>();
+        if (playerHealth == null) playerHealth = gameObject.AddComponent<PlayerHealth>();
+        
+        playerHealth.Initialize(initialHealthPoints);
+
+        playerMovement = GetComponent<PlayerMovement>();
+
+        if (GetComponent<GameOverHandler>() == null) gameObject.AddComponent<GameOverHandler>();
     }
 
     //considerar un constructor para las clases del player en caso de querer eliminar monobehaviours

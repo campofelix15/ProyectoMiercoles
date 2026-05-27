@@ -1,52 +1,79 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
-public class PlayerHealth
+public class PlayerHealth : MonoBehaviour, ISubject
 {
-    [SerializeField] private LayerMask hitMask;
     [SerializeField] private int maxHealth = 10;
     private int currentHealth;
 
-    public static event Action OnPlayerDamaged;
-    public static event Action OnPlayerHealed;
-    public static event Action OnPlayerDeath;
+    [SerializeField] private float immunityDuration = 1.5f;
+    private float immunityTimer;
+    public bool IsInvulnerable => immunityTimer > 0;
+
+    private List<IObserver> observers = new List<IObserver>();
+
     public int MaxHealth => maxHealth;
     public int CurrentHealth => currentHealth;
 
-
-    private void Init(PlayerController player)
+    private void Awake()
     {
-        currentHealth = player.maxHealth;
+        currentHealth = maxHealth;
     }
 
-    public void TakeDamage(int damage, Vector2 hitDirection, float knockbackForce)
+    private void Update()
     {
-        currentHealth -= damage;
-        Debug.Log("took damage: " + currentHealth);
-        //OnPlayerDamaged!.Invoke();
-
-        if (currentHealth <= 0) 
+        if (immunityTimer > 0)
         {
-            Death();
+            immunityTimer -= Time.deltaTime;
         }
+    }
+
+    public void Initialize(int initialHealth)
+    {
+        maxHealth = initialHealth;
+        currentHealth = maxHealth;
+    }
+
+    public void Attach(IObserver observer)
+    {
+        if (!observers.Contains(observer))
+        {
+            observers.Add(observer);
+        }
+    }
+
+    public void Detach(IObserver observer)
+    {
+        if (observers.Contains(observer))
+        {
+            observers.Remove(observer);
+        }
+    }
+
+    public void Notify()
+    {
+        foreach (var observer in observers)
+        {
+            observer.OnNotify();
+        }
+    }
+
+    public bool TakeDamage(int damage)
+    {
+        if (IsInvulnerable) return false;
+
+        currentHealth -= damage;
+        Debug.Log("Player took damage. Current health: " + currentHealth);
+        
+        immunityTimer = immunityDuration;
+        Notify();
+        return true;
     }
 
     public void GainHealth(int heal)
     {
         currentHealth = Mathf.Min(currentHealth + heal, maxHealth);
-        OnPlayerHealed?.Invoke();
+        Notify();
     }
-
-    public void Death()
-    {
-        SceneController.Instance
-            .NewTransition()
-            .Unload(SceneDataBase.Scenes.Match)
-            .Unload(SceneDataBase.Scenes.Session)
-            .Load(SceneDataBase.Slots.Menu, SceneDataBase.Scenes.MainMenu)
-            .WithClearUnusedAssets()
-            .WithOverlay()
-            .Perfrom();
-    }
-
 }

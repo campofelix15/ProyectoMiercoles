@@ -2,32 +2,32 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class HealthBarManager : MonoBehaviour
+public class HealthBarManager : MonoBehaviour, IObserver
 {
     public GameObject heartsPrefab;
     private PlayerHealth playerHealth;
     List<HealthHeart> hearts = new List<HealthHeart>();
 
-    private void OnEnable()
-    {
-        
-        PlayerHealth.OnPlayerDamaged += Drawhearts;
-        PlayerHealth.OnPlayerHealed += Drawhearts;
-    }
-
-    private void OnDisable()
-    {
-        PlayerHealth.OnPlayerDamaged -= Drawhearts;
-        PlayerHealth.OnPlayerHealed -= Drawhearts;
-
-    }
-
-    void Start()
+    private void Start()
     {
         playerHealth = SessionController.Instance.PlayerManager.PlayerHealth;
-
+        playerHealth.Attach(this);
         Drawhearts();
     }
+
+    private void OnDestroy()
+    {
+        if (playerHealth != null)
+        {
+            playerHealth.Detach(this);
+        }
+    }
+
+    public void OnNotify()
+    {
+        Drawhearts();
+    }
+
     public void Drawhearts()
     {
         Clearhearts();

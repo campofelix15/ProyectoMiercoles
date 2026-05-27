@@ -5,8 +5,6 @@ public class PlayerController : MonoBehaviour
 
     [Header("Health")]
     PlayerHealth health;
-    public int maxHealth;
-    int currentHealth;
 
     [Header("Weapon")]
     PlayerWeapon weapon;
@@ -25,6 +23,10 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private Transform firePoint;
     public Transform FirePoint => firePoint;
 
+    [Header("Visuals")]
+    [SerializeField] private SpriteRenderer spriteRenderer;
+    [SerializeField] private float flickerInterval = 0.1f;
+
     [Header("Movement")]
     PlayerMovement movement;
     float speed;
@@ -36,12 +38,41 @@ public class PlayerController : MonoBehaviour
 
     private void Awake()
     {
-        var DataRef = SessionController.Instance.PlayerManager;
         inputActions = new();
+        rb = GetComponent<Rigidbody2D>();
+        if (spriteRenderer == null) spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+    }
+
+    private void Start()
+    {
+        var DataRef = SessionController.Instance.PlayerManager;
         weapon = DataRef.PlayerWeapon;
         health = DataRef.PlayerHealth;
-        rb = GetComponent<Rigidbody2D>();
+        movement = GetComponent<PlayerMovement>();
         weapon.Init(this);
+    }
+
+    private void Update()
+    {
+        HandleFlicker();
+    }
+
+    private void HandleFlicker()
+    {
+        if (health != null && health.IsInvulnerable)
+        {
+            // Titileo simple basado en el tiempo
+            float alpha = (Mathf.Floor(Time.time / flickerInterval) % 2 == 0) ? 0.2f : 1.0f;
+            Color color = spriteRenderer.color;
+            color.a = alpha;
+            spriteRenderer.color = color;
+        }
+        else if (spriteRenderer.color.a < 1.0f)
+        {
+            Color color = spriteRenderer.color;
+            color.a = 1.0f;
+            spriteRenderer.color = color;
+        }
     }
 
     private void OnEnable()
@@ -63,10 +94,27 @@ public class PlayerController : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if ((8 & (1 << collision.gameObject.layer)) != 0)
+        Debug.Log("Player collided with: " + collision.gameObject.name + " on layer: " + collision.gameObject.layer);
+        
+        // Probamos con una detección más flexible para depurar
+        // Capa 8 suele ser enemigos. 
+        if ((1 << collision.gameObject.layer & (1 << 8)) != 0 || collision.gameObject.CompareTag("Enemy"))
         {
-            health.TakeDamage(1, new Vector2(-1, -1), 25f);
+            Debug.Log("Enemy detected!");
+            if (health.TakeDamage(1))
+            {
+                Vector2 knockbackDir = (transform.position - collision.transform.position).normalized;
+                if (Mathf.Abs(knockbackDir.x) < 0.1f) knockbackDir.x = transform.position.x > collision.transform.position.x ? 1 : -1;
+                
+                ApplyKnockback(knockbackDir, 10f);
+            }
         }
+    }
+
+    public void ApplyKnockback(Vector2 direction, float force)
+    {
+        rb.linearVelocity = Vector2.zero; // Limpiar velocidad previa para un empuje consistente
+        rb.AddForce(direction * force, ForceMode2D.Impulse);
     }
 
 
