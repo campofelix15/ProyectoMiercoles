@@ -3,13 +3,8 @@ using UnityEngine.InputSystem;
 
 public class PlayerWeapon : MonoBehaviour
 {
-    private GameObject bulletPrefab;
-    private Transform firePoint;
-    private float bulletSpeed;
-    private float bulletLifetime = 0.5f;
+    private IWeapon _weapon;
     private float bulletSpread;
-    private int damage;
-    private float knockbackforce;
     private int bulletsCount;
 
     private InputSystem_Actions inputActions;
@@ -17,16 +12,31 @@ public class PlayerWeapon : MonoBehaviour
     private Vector2 movement;
     private Vector2 lastDirection = Vector2.right; // default
 
+    [SerializeField] private bool hasCriticalHit = false;
+
     public void Init(PlayerController player)
     {                                                                   
         inputActions = player.InputActions;
-        firePoint = player.FirePoint;
-        damage = player.Damage;
-        knockbackforce = player.KnockbackForce;
         bulletSpread = player.BulletSpread;
-        bulletSpeed = player.BulletSpeed;
         bulletsCount = player.BulletsCount;
-        bulletPrefab = player.BulletPrefab;
+
+        IWeapon baseWeapon = new BaseWeapon(
+            player.BulletPrefab, 
+            player.FirePoint, 
+            player.BulletSpeed, 
+            0.5f, 
+            player.Damage, 
+            player.KnockbackForce
+        );
+
+        if (hasCriticalHit)
+        {
+            _weapon = new CriticalHitWeaponDecorator(baseWeapon);
+        }
+        else
+        {
+            _weapon = baseWeapon;
+        }
     }
 
     public void OnAltFire(InputAction.CallbackContext ctx)
@@ -55,7 +65,7 @@ public class PlayerWeapon : MonoBehaviour
         ? movement.normalized
         : lastDirection;
 
-        FireBullet(baseDir);
+        _weapon.Shoot(baseDir);
     }
 
     void ShootSpread()
@@ -64,32 +74,13 @@ public class PlayerWeapon : MonoBehaviour
             ? movement.normalized
             : lastDirection;
 
-        //for (int i =0; i<= bulletsCount; i++)
-        //{
-        //    FireBullet(baseDir);
-        //} Cambiar x formula para los tiros blablabla
-
-        FireBullet(baseDir); // centro
-        FireBullet(Rotate(baseDir, bulletSpread));   // derecha
-        FireBullet(Rotate(baseDir, -bulletSpread));  // izquierda
+        _weapon.Shoot(baseDir);
+        _weapon.Shoot(Rotate(baseDir, bulletSpread));
+        _weapon.Shoot(Rotate(baseDir, -bulletSpread));
     }
 
     Vector2 Rotate(Vector2 direction, float angle)
     {
         return Quaternion.Euler(0, 0, angle) * direction;
-    }
-
-    void FireBullet(Vector2 dir)
-    {
-
-        GameObject bullet = ObjectPoolManager.SpawnObject(bulletPrefab, firePoint.position, Quaternion.identity);
-
-        bullet.GetComponent<Bullet>().Init(dir, bulletLifetime, damage, knockbackforce);
-
-        Rigidbody2D rb = bullet.GetComponent<Rigidbody2D>();
-        rb.linearVelocity = dir * bulletSpeed;
-
-        float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
-        bullet.transform.rotation = Quaternion.Euler(0, 0, angle);
     }
 }
